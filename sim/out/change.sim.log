@@ -1,0 +1,4 @@
+Boot: core0 cortex-m0+ pc=0x00001968 sp=0x20042000 not from a --elf image
+Boot: core1 cortex-m0+ pc=0x00001968 sp=0x20042000 not from a --elf image
+[uart] uart1 <-> tcp:47102
+[usb-raw] usb <-> tcp:127.0.0.1:47101

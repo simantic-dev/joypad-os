@@ -1,0 +1,5 @@
+reset: {'error': "'usbd' does not model a bus reset", 'id': 1}
+device descriptor: {'data': '12010002ef0201408a2ec610300201020301', 'id': 2, 'ok': True}
+config descriptor (9 B): {'data': '12010002ef0201408a2ec610300201020301', 'id': 3, 'ok': True}
+SET_ADDRESS 1: {'data': '', 'id': 4, 'ok': True}
+config descriptor after SET_ADDRESS: {'data': '09029d00050100a0fa', 'id': 5, 'ok': True}

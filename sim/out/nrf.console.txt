@@ -1,0 +1,67 @@
+[0.407609s] (uart0) *** Booting nRF Connect SDK v3.1.0-6c6e5b32496e ***
+[0.412293s] (uart0) *** Using Zephyr OS v4.1.99-1612683d4010 ***
+[0.416361s] (uart0) [joypad] Starting usb2usb on Adafruit Feather nRF52840...
+[0.421660s] (uart0) [led_nrf] RGB LEDs initialized (R=P0.26 G=P0.30 B=P0.6, active low)
+[0.431485s] (uart0) [flash_nrf] NVS initialized (6 sectors)
+[0.435194s] (uart0) [flash_nrf] No saved settings (read zd bytes)
+[0.439434s] (uart0) [players] Initializing player management (SHIFT mode, 5 slots)
+[0.445176s] (uart0) [app:usb2usb] Initializing USB2USB v2.3.0
+[0.449062s] (uart0) [button] Initialized on P0.03
+[0.451889s] (uart0) [ROUTER]Initializing router
+[0.454538s] (uart0) [ROUTER]  Mode: MERGE
+[0.456658s] (uart0) [ROUTER]  Merge mode: BLEND
+[0.459307s] (uart0) [ROUTER]  Merge all inputs: YES
+[0.463815s] (uart0) [ROUTER]All routes cleared
+[0.466377s] (uart0) [ROUTER]Initialized successfully
+[0.469468s] (uart0) [ROUTER]  Transformations enabled: 0x01
+[0.473178s] (uart0) [ROUTER]    - Mouse-to-analog (target_x=3, target_y=255, drain=0)
+[0.479184s] (uart0) [ROUTER]Route added: USB ... ? (priority=0)
+[0.483247s] (uart0) [players] Initializing player management
+[0.487045s] (uart0) [players]   Mode: FIXED
+[0.489342s] (uart0) [players]   Max slots: 4
+[0.491727s] (uart0) [players]   Auto-assign: YES
+[0.494465s] (uart0) [display] No I2C device at 0x3C
+[0.597501s] (uart0) [display] Initialized SH1107 128x64 OLED (I2C)
+[0.601829s] (uart0) [app:usb2usb] OLED display initialized (SH1107 I2C)
+[0.606600s] (uart0) [uart_host] Initializing UART host (nRF/Zephyr)
+[0.611016s] (uart0) [uart_host] Initialization complete (IRQ-driven RX, ring=1024)
+[0.616757s] (uart0) [app:usb2usb] Initialization complete
+[0.620291s] (uart0) [app:usb2usb]   Routing: USB Host ... USB Device (HID Gamepad)
+[0.626032s] (uart0) [app:usb2usb]   Player slots: 4
+[0.629035s] (uart0) [app:usb2usb]   Double-click button (GPIO7) to switch USB mode
+[0.634777s] (uart0) [max3421] Init SPI host
+[0.637073s] (uart0) [max3421] Probe: rev 0x00 0x00 0x00
+[0.640429s] (uart0) [max3421] ERROR: chip not detected
+[0.643697s] (uart0) [joypad] MAX3421E not detected - USB host disabled
+[0.648378s] (uart0) [joypad] Initializing input: USB Host
+[0.651911s] (uart0) [usbh] Initializing USB host
+[0.654649s] (uart0) [max3421] Init SPI host
+[0.656945s] (uart0) [max3421] Probe: rev 0x00 0x00 0x00
+[0.660308s] (uart0) [max3421] ERROR: chip not detected
+[0.663576s] (uart0) [usbh] MAX3421E not detected, USB host disabled
+[0.667993s] (uart0) [usbh] Initialization complete
+[0.670907s] (uart0) [joypad] Initializing output: USB
+[0.674087s] (uart0) [usbd] Initializing USB device output
+[0.681178s] (uart0) [flash_nrf] NVS initialized (6 sectors)
+[0.684887s] (uart0) [flash_nrf] No saved settings (read zd bytes)
+[0.689127s] (uart0) [usbd] Flash load success! usb_output_mode=0, active_profile=0
+[0.694869s] (uart0) [usbd] Flash has DInput (0), keeping default: SInput
+[0.699729s] (uart0) [usbd] Mode: SInput
+[0.701696s] (uart0) [usbd] Serial: a1b965f47b1d
+[0.704956s] (uart0) [CDC] Build Info Debug:
+[0.707375s] (uart0) [CDC]   APP_NAME: usb2usb
+[0.710001s] (uart0) [CDC]   JOYPAD_VERSION: 2.3.0
+[0.712974s] (uart0) [CDC]   GIT_COMMIT: 4a6b3c1d
+[0.715943s] (uart0) [CDC]   BUILD_TIME: 2026-08-10 15:31:04
+[0.719807s] (uart0) [CDC]   BOARD_NAME: xiao_ble
+[0.722751s] (uart0) [ROUTER]Tap registered for output 9
+[0.726107s] (uart0) [usbd] Initialization complete
+[0.729122s] (uart0) [joypad] tusb_inited=1
+[0.731330s] (uart0) [usb] HFCLK running
+[0.733563s] (uart0) [usb] USBREGSTATUS=0x00000003 VBUS=1 OUTRDY=1
+[0.737802s] (uart0) [usb] Firing DETECTED event
+[0.740452s] (uart0) [usb] Firing READY event
+[0.743056s] (uart0) [usb] USBD init complete, pullup=1
+[0.746437s] (uart0) [max3421] INT on, pin=1
+[0.748734s] (uart0) [joypad] Entering main loop
+[0.751495s] (uart0) [m] isr=0 me=1 pin=1

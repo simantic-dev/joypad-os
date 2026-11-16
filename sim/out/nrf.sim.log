@@ -1,0 +1,5 @@
+warning: NRF52840QIAA's model is incomplete
+Boot: core0 cortex-m4 pc=0x0001b430 sp=0x20024100 elf/usb2usb_nrf52840dk.elf
+[usb-raw] usbd <-> tcp:127.0.0.1:47103
+Firmware: elf/usb2usb_nrf52840dk.elf sha256=69f45aa3287c4e0c97737b136066727276ec7f63e5673adefdd40462fefb66a7
+Elapsed: 3.029s

@@ -1,0 +1,11 @@
+usb reset: {'id': 1, 'ok': True}
+usb device 2b81:0101
+usb configured, HID IN endpoint 0x81
+subscribe: {'id': 7, 'ok': True}
+  t= 1000 ms  pad: HOME press
+  t= 1040 ms  pad: HOME release
+  t= 2000 ms  pad: HOME press
+  t= 2040 ms  pad: HOME release
+  t= 3000 ms  pad: HOME press
+  t= 3040 ms  pad: HOME release
+  0 reports to console, 0 sign requests

@@ -1,3 +1,36 @@
+## Simulation showcase (Simantic fork)
+
+This fork runs unmodified Joypad OS firmware images on [Simantic](https://simantic.dev)'s `sim` (release 0.10.0, 2026-11-13), with scripted Python peers standing in for the host, the gamepad and the partner board. Licence of this repository: **Apache-2.0** (see `LICENSE`); the images in `sim/elf/` are builds of this code base and carry the same licence. Everything is in `sim/`: `run.sh`, `run_nrf.sh`, `peer.py`, `nrf_enum.py`, plotting scripts, `out/` (captured logs) and `screenshots/`.
+
+```mermaid
+flowchart LR
+  pad["pad (peer.py)"] -- "uart1 frames, 4 Mbaud" --> A["RP2040: usb2usb remapper A"]
+  A -- "uart1 STATUS every 8 ms" --> pad
+  A -- "USB device" --> host["console host (peer.py, --usb-raw)"]
+  nrf["nRF52840: usb2usb DK image"] -- "USBD, --usb-raw" --> host2["host (nrf_enum.py)"]
+```
+
+| Configuration | Command | Image | Result (MEASURED, 2026-11-16, sim 0.10.0) |
+| --- | --- | --- | --- |
+| RP2040 remapper A: boot and console | `sim/run.sh refresh` | `a_ps5default_2145ffa8.elf` (PS5 default, RP2040) | boots; 25 console lines by 0.10 s; `[button] Event: HOLD` at 1.603 s; screenshot 01 |
+| RP2040: USB enumeration | same | same | device 2b81:0101 configured, HID IN endpoint 0x81 |
+| RP2040: gamepad HOME presses through the adapter to the console | `sim/run.sh change`, `sim/run.sh refresh` | same | **not working on 0.10.0**: 3 presses sent over UART, A's STATUS ticks received, 0 HID reports reach the console, no `Player 1 assigned` line. An earlier unreleased dev build of the sim (2026-10-11) assigned Player 1 at 1.08 s on the same image. Cause: `unverified` |
+| nRF52840 usb2usb DK image: boot | `sim/run_nrf.sh` | `usb2usb_nrf52840dk.elf` | boots to `Entering main loop` at 0.75 s virtual, 1.9 s wall; the sim flags the model `incomplete` and does not list it in `sim models`; screenshot 02 |
+| nRF52840: USBD descriptors | same | same | device descriptor read (VID 2e8a, PID 10c6); config header read after SET_ADDRESS (wTotalLength 0x9d, 5 interfaces). Bus reset is not modelled (`'usbd' does not model a bus reset`); before SET_ADDRESS a config-descriptor request returns the device descriptor again. Enumeration to Configured: `unverified` on 0.10.0 |
+| nRF52840: gamepad through the adapter | n/a | n/a | not run: the MAX3421E SPI face has no peer on 0.10.0 (`[max3421] ERROR: chip not detected`), and the UART inject path (`uart_host`) is not in this repository's `main` |
+
+![RP2040 console](sim/screenshots/01-console-timeline-rp2040.png)
+![nRF52840 console](sim/screenshots/02-console-timeline-nrf52840.png)
+![pad vs HID reports](sim/screenshots/03-pad-vs-hid-reports-rp2040.png)
+
+Provenance and simplifications:
+
+- `sim/elf/*.elf` are prebuilt, not built here. The nRF image banner says JOYPAD_VERSION 2.3.0, GIT_COMMIT 4a6b3c1d, board `xiao_ble`, from a branch adding the nRF52840 DK target and `uart_host`; that source is not in this tree. Rebuilding from source: `unverified`.
+- MODELED SIMPLIFICATION: `peer.py` stands in for the console, the dongle, board B and the pad as one scripted peer; it counts A's 8 ms STATUS frames as its clock and answers sign requests immediately.
+- No bench comparison against silicon was made for these runs.
+
+Run: `sim/run.sh refresh` (needs `sim` on PATH, `python3`, `nc`); plots need `matplotlib`.
+
 # Joypad OS
 
 <p align="center">
