@@ -14,7 +14,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | RP2040 remapper A: boot and console | `sim/run.sh refresh` | `a_ps5default_2145ffa8.elf` (PS5 default, RP2040) | boots; 25 console lines by 0.10 s; `[button] Event: HOLD` at 1.603 s; screenshot 01 |
 | RP2040: USB enumeration | same | same | device 2b81:0101 configured, HID IN endpoint 0x81 |
-| RP2040: gamepad HOME presses through the adapter to the console | `sim/run.sh change`, `sim/run.sh refresh` | same | **not working on 0.10.0**: 3 presses sent over UART, A's STATUS ticks received, 0 HID reports reach the console, no `Player 1 assigned` line. An earlier unreleased dev build of the sim (2026-10-11) assigned Player 1 at 1.08 s on the same image. Cause: `unverified` |
+| RP2040: gamepad HOME presses through the adapter to the console | `sim/run.sh change`, `sim/run.sh refresh` | same | **not working on 0.10.0** (also 0 reports on 0.8.12, 0.9.0, 0.9.2): 3 presses sent over UART, A's STATUS ticks received, 0 HID reports reach the console. Cause: simulator model bug, not firmware. Bytes sent with `--uart-tcp`/`--uart-pty` never reach the RP2040 PL011 (a counter in `Pl011::receive_byte` saw 0 calls): the injection path finds the UART through `uart_rx()`, and the RP2040 clock wrapper `ClockGated` forwards `host_rx()` but not `uart_rx()`, so the bytes are dropped. Not fixed in the released sim |
 | nRF52840 usb2usb DK image: boot | `sim/run_nrf.sh` | `usb2usb_nrf52840dk.elf` | boots to `Entering main loop` at 0.75 s virtual, 1.9 s wall; the sim flags the model `incomplete` and does not list it in `sim models`; screenshot 02 |
 | nRF52840: USBD descriptors | same | same | device descriptor read (VID 2e8a, PID 10c6); config header read after SET_ADDRESS (wTotalLength 0x9d, 5 interfaces). Bus reset is not modelled (`'usbd' does not model a bus reset`); before SET_ADDRESS a config-descriptor request returns the device descriptor again. Enumeration to Configured: `unverified` on 0.10.0 |
 | nRF52840: gamepad through the adapter | n/a | n/a | not run: the MAX3421E SPI face has no peer on 0.10.0 (`[max3421] ERROR: chip not detected`), and the UART inject path (`uart_host`) is not in this repository's `main` |
@@ -22,6 +22,8 @@ flowchart LR
 ![RP2040 console](sim/screenshots/01-console-timeline-rp2040.png)
 ![nRF52840 console](sim/screenshots/02-console-timeline-nrf52840.png)
 ![pad vs HID reports](sim/screenshots/03-pad-vs-hid-reports-rp2040.png)
+
+**Corrected (2026-11-16).** The 0-report result in the chart is the real result on the released sim. An earlier version of this text named the PL011 RTS/CTS fix as the likely cause and cited a "Player 1 assigned" line from an older dev build. Both are withdrawn. The RTS/CTS fix is in the 0.10.0 build and works (CR=0xC301, RTSEN set), and a build that skipped the RTSEN hold still gave 0 reports. `Player 1` in A's STATUS frames is hardcoded in `usb2usb_remapper_v7_a/app.c` (`st.player_number = 1`, flags = CONNECTED), so it is not evidence of a player assignment. In a scratch pyrite worktree, a 3-line `uart_rx` forward in `ClockGated` gave 11 HID reports and 12 sign requests on the same ELF and scenario; this is a scratch build, not shipped. That older dev builds delivered the bytes is `unverified`.
 
 Provenance and simplifications:
 
