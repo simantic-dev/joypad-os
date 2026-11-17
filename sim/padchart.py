@@ -11,5 +11,5 @@ for t, k in presses: ax.axvline(t, color="#1f6feb" if k == "press" else "#8b949e
 ax.plot(reports, [1] * len(reports), "r|", ms=20, label=f"HID IN reports seen: {len(reports)}")
 ax.plot([], [], color="#1f6feb", label="pad HOME press (blue) / release (grey) sent over UART")
 ax.set_yticks([]); ax.set_xlabel("ms of A's clock (8 ms STATUS ticks)"); ax.legend(loc="upper right", fontsize=8)
-ax.set_title(f"mode={mode}: gamepad events in, HID reports out (sim 0.10.0, RP2040)")
+ax.set_title(f"mode={mode}: gamepad events in, HID reports out (sim 0.10.2, RP2040)")
 fig.tight_layout(); fig.savefig(sys.argv[2], dpi=110)
