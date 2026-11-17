@@ -19,6 +19,10 @@ flowchart LR
 | nRF52840: USBD descriptors | same | same | device descriptor read (VID 2e8a, PID 10c6); config header read after SET_ADDRESS (wTotalLength 0x9d, 5 interfaces). Bus reset is not modelled (`'usbd' does not model a bus reset`); before SET_ADDRESS a config-descriptor request returns the device descriptor again. Enumeration to Configured: `unverified` on 0.10.0 |
 | nRF52840: gamepad through the adapter | n/a | n/a | not run: the MAX3421E SPI face has no peer on 0.10.0 (`[max3421] ERROR: chip not detected`), and the UART inject path (`uart_host`) is not in this repository's `main` |
 
+![RP2040 playback](sim/screenshots/04-playback-rp2040.gif)
+
+*Playback of a captured run (virtual time), not real time: sim 0.10.2 (build 83eb7a66), 4.1 s of virtual time shown (run bound 8 s), about 43 s wall for `sim/run.sh refresh`. Gamepad HOME press/release (triangles), the 11 HID IN reports (squares) and the console lines, all from `sim/out/refresh.*`.*
+
 ![RP2040 console](sim/screenshots/01-console-timeline-rp2040.png)
 ![nRF52840 console](sim/screenshots/02-console-timeline-nrf52840.png)
 ![pad vs HID reports](sim/screenshots/03-pad-vs-hid-reports-rp2040.png)
