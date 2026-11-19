@@ -15,8 +15,8 @@ chk "console sees HOME UP after 192 ms hold" "HOME UP   (held 192 ms)"
 chk "11 reports, 12 sign requests" "11 reports to console, 12 sign requests"
 if grep -qiE 'panic|hardfault|guru' "$OUT/refresh.console.txt" "$OUT/refresh.sim.log"; then echo "FAIL no fault"; rc=1; else echo "ok   no fault"; fi
 
-# nRF52840: bt2usb (Feather build, NCS 3.1.0) on one machine, a Zephyr HID-over-GATT gamepad (sim/peers/nrf_pad)
-# on a second one. Pass = LESC pairing + HOGP discovery, USB enumeration, and the pad's A, B+START and
+# nRF52840: bt2usb (Feather build, NCS 3.1.0) on one machine, a Python ScriptedBlePeer HID-over-GATT gamepad (sim/peers/ble_pad.py)
+# on the BLE medium. Pass = LESC pairing + HOGP discovery, USB enumeration, and the pad's A, B+START and
 # left-stick moves arrive at the USB console host as SInput reports.
 SIM=${SIM:-sim} OUT=$OUT sh sim/run_nrf_ble.sh >"$OUT/nrf_ble.txt" 2>&1
 chk2() { if grep -qF -- "$2" "$3"; then echo "ok   $1"; else echo "FAIL $1"; rc=1; fi; }
