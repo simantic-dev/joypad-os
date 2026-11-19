@@ -31,6 +31,9 @@ message(STATUS "APP_TYPE: ${APP_TYPE}")
 
 project(joypad_${APP_TYPE})
 
+# GCC >= 14 makes implicit declarations (strcasecmp, funopen under -std=c99 + _ANSI_SOURCE) hard errors.
+target_compile_options(app PRIVATE -Wno-error=implicit-function-declaration -Wno-error=int-conversion)
+
 set(SHARED_SRC "${CMAKE_CURRENT_LIST_DIR}/../src")
 set(BTSTACK_PATH "${SHARED_SRC}/lib/pico-sdk/lib/btstack")
 set(TINYUSB_PATH "${SHARED_SRC}/lib/tinyusb")
