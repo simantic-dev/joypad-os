@@ -1,0 +1,11 @@
+board: nrf52840dk/nrf52840
+machines:
+  joypad:
+    mcu: NRF52840QIAA
+    elf: elf/bt2usb_feather_nrf52840.elf
+  pad:
+    mcu: NRF52840QIAA
+    elf: elf/nrf_pad_peripheral.elf
+media:
+  - type: ble
+    connect: [joypad.radio, pad.radio]
