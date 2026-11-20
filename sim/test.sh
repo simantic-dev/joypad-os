@@ -26,5 +26,12 @@ chk2 "nRF: HID reports enabled" "Ready to receive HID reports" "$OUT/nrf_ble.con
 chk2 "nRF: console sees A" "buttons=SOUTH lx=0 ly=0" "$OUT/nrf_ble.txt"
 chk2 "nRF: console sees B+START" "buttons=EAST+START" "$OUT/nrf_ble.txt"
 chk2 "nRF: console sees left stick right/up" "lx=32512 ly=-32768" "$OUT/nrf_ble.txt"
+# Full pad: every input once. HID usage 16 has no slot in Joypad's generic button map (usages 1..15 only), so 15 buttons.
+for b in SOUTH EAST WEST NORTH L1 R1 L2 R2 BACK START L3 R3 GUIDE CAPTURE BIT25; do chk2 "nRF: button $b seen alone" "seen button $b" "$OUT/nrf_ble.txt"; done
+for h in U UR R DR D DL L UL; do chk2 "nRF: hat $h" "seen hat $h" "$OUT/nrf_ble.txt"; done
+for a in lx ly rx ry; do for e in low high; do chk2 "nRF: stick $a $e extreme" "seen stick $a $e" "$OUT/nrf_ble.txt"; done; done
+for t in lt rt; do chk2 "nRF: trigger $t 0 -> full" "seen trigger $t" "$OUT/nrf_ble.txt"; done
+# Output reports (rumble / LED) are reported, never required.
+grep -h "output report write" "$OUT/nrf_ble.sim.log" || echo "info nRF: Joypad wrote no output report (rumble/LED) to the pad"
 if grep -qiE 'panic|hardfault|assert|fatal' "$OUT/nrf_ble.console.txt" "$OUT/nrf_ble.sim.log"; then echo "FAIL nRF: no fault"; rc=1; else echo "ok   nRF: no fault"; fi
 exit $rc
