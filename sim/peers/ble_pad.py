@@ -13,17 +13,36 @@ ATT_MTU = 23
 
 PRIMARY, CHAR, CCC, REPORT_REF = 0x2800, 0x2803, 0x2902, 0x2908
 HIDS, HID_INFO, REPORT_MAP, REPORT, CTRL_POINT = 0x1812, 0x2A4A, 0x2A4B, 0x2A4D, 0x2A4C
-R, WNR, N = 0x02, 0x04, 0x10
+R, WNR, W, N = 0x02, 0x04, 0x08, 0x10
 
+# Input report 1 (sent without the ID byte, as the Zephyr pad did): 16 buttons, hat (4 bits + 4 pad), X Y Z Rz Rx Ry u8
+# (left stick, right stick, left/right trigger: Joypad's generic driver reads Z/Rz as right stick, Rx/Ry as triggers).
+# Output report 2: rumble left, rumble right, player LED.
 REPORT_MAP_VALUE = bytes([
     0x05, 0x01, 0x09, 0x05, 0xA1, 0x01, 0x85, 0x01,
     0x05, 0x09, 0x19, 0x01, 0x29, 0x10, 0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x10, 0x81, 0x02,
-    0x05, 0x01, 0x09, 0x30, 0x09, 0x31, 0x09, 0x32, 0x09, 0x35,
-    0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, 0x04, 0x81, 0x02, 0xC0])
+    0x05, 0x01, 0x09, 0x39, 0x15, 0x00, 0x25, 0x07, 0x35, 0x00, 0x46, 0x3B, 0x01, 0x65, 0x14,
+    0x75, 0x04, 0x95, 0x01, 0x81, 0x42, 0x75, 0x04, 0x95, 0x01, 0x81, 0x03,
+    0x09, 0x30, 0x09, 0x31, 0x09, 0x32, 0x09, 0x35, 0x09, 0x33, 0x09, 0x34,
+    0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, 0x06, 0x81, 0x02,
+    0x85, 0x02, 0x06, 0x00, 0xFF, 0x09, 0x01, 0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, 0x03, 0x91, 0x02,
+    0xC0])
 
-STEPS = [bytes([b0, b1, x, y, 128, 128]) for b0, b1, x, y in (
-    (0, 0, 128, 128), (1, 0, 128, 128), (0, 0, 128, 128), (2, 2, 128, 128),
-    (0, 0, 128, 128), (0, 0, 255, 0), (0, 0, 128, 128))]
+NEUTRAL = dict(buttons=0, hat=8, x=128, y=128, z=128, rz=128, rx=0, ry=0)
+
+
+def step(**kw):
+    d = dict(NEUTRAL, **kw)
+    return struct.pack('<HB6B', d['buttons'], d['hat'], d['x'], d['y'], d['z'], d['rz'], d['rx'], d['ry'])
+
+
+# A, B+START, left stick right/up (the original three), then every input once.
+STEPS = [step(), step(buttons=1), step(), step(buttons=0x202), step(), step(x=255, y=0), step()]
+STEPS += [step(buttons=1 << i) for i in range(16)] + [step()]
+STEPS += [step(hat=h) for h in range(8)] + [step()]
+for ax in ('x', 'y', 'z', 'rz'):
+    STEPS += [step(**{ax: 0}), step(**{ax: 255}), step()]
+STEPS += [step(rx=255), step(), step(ry=255), step()]
 
 # (handle, type, value, needs_encryption)
 ATTRS = [
@@ -36,11 +55,14 @@ ATTRS = [
     (0x07, REPORT, b'', True),
     (0x08, CCC, b'\x00\x00', True),
     (0x09, REPORT_REF, bytes([1, 1]), False),
-    (0x0A, CHAR, struct.pack('<BHH', WNR, 0x0B, CTRL_POINT), False),
-    (0x0B, CTRL_POINT, b'\x00', False),
+    (0x0A, CHAR, struct.pack('<BHH', R | W | WNR, 0x0B, REPORT), False),
+    (0x0B, REPORT, bytes(3), False),
+    (0x0C, REPORT_REF, bytes([2, 2]), False),
+    (0x0D, CHAR, struct.pack('<BHH', WNR, 0x0E, CTRL_POINT), False),
+    (0x0E, CTRL_POINT, b'\x00', False),
 ]
-GROUPS = [(0x01, 0x0B, HIDS)]
-H_REPORT, H_CCC = 0x07, 0x08
+GROUPS = [(0x01, 0x0E, HIDS)]
+H_REPORT, H_CCC, H_OUT = 0x07, 0x08, 0x0B
 
 
 def u16(v):
@@ -142,6 +164,9 @@ class Peer:
                 return op == WRITE and self._err(pdu, h, NOT_FOUND)
             if self.attrs[h][3] and not self.encrypted:
                 return op == WRITE and self._err(pdu, h, INSUFF_ENC)
+            if h == H_OUT:
+                self.attrs[h][2] = bytes(pdu[3:])
+                self.ctx.info('output report write from Joypad: %s' % bytes(pdu[3:]).hex())
             if h == H_CCC:
                 self.attrs[h][2] = bytes(pdu[3:5]).ljust(2, b'\0')
                 self.subscribed = bool(pdu[3] & 1)

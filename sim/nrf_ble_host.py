@@ -6,7 +6,11 @@ import json, sys, time
 from peer import Usb
 
 # SInput report 0x01 (src/usb/usbd/descriptors/sinput_descriptors.h): buttons u32 LE at [3:7], LX/LY i16 at [7:11]
-BTN = {"EAST": 0, "SOUTH": 1, "START": 16}
+BTN = {"EAST": 0, "SOUTH": 1, "NORTH": 2, "WEST": 3, "DU": 4, "DD": 5, "DL": 6, "DR": 7, "L3": 8, "R3": 9, "L1": 10, "R1": 11,
+       "L2": 12, "R2": 13, "START": 16, "BACK": 17, "GUIDE": 18, "CAPTURE": 19}
+# rx/ry at [11:15], lt/rt at [15:19] (i16, triggers 0..32767)
+HAT = {"U": (4,), "UR": (4, 7), "R": (7,), "DR": (5, 7), "D": (5,), "DL": (5, 6), "L": (6,), "UL": (4, 6)}
+seen_btn, seen_hat, lo, hi = set(), set(), {}, {}
 u = Usb(int(sys.argv[1]))
 u.enumerate()
 n, last = 0, None
@@ -27,10 +31,30 @@ while time.time() < end:
             b = bytes.fromhex(d)
             if b[0] != 1:
                 continue
-            btn, lx, ly = int.from_bytes(b[3:7], "little"), int.from_bytes(b[7:9], "little", signed=True), int.from_bytes(b[9:11], "little", signed=True)
+            btn = int.from_bytes(b[3:7], "little")
+            ax = dict(zip(("lx", "ly", "rx", "ry", "lt", "rt"), (int.from_bytes(b[o:o + 2], "little", signed=True) for o in range(7, 19, 2))))
             names = [k for k, bit in BTN.items() if btn >> bit & 1]
-            state = (btn, lx, ly)
+            dp = tuple(sorted(bit for bit in (4, 5, 6, 7) if btn >> bit & 1))
+            if len(names) == 1 and not dp:
+                seen_btn.add(names[0])
+            seen_btn.update(f"BIT{i}" for i in range(32) if btn >> i & 1 and i not in BTN.values())
+            seen_hat.update(h for h, bits in HAT.items() if dp == tuple(sorted(bits)))
+            for k, v in ax.items():
+                lo[k], hi[k] = min(lo.get(k, v), v), max(hi.get(k, v), v)
+            state = (btn, *ax.values())
             if state != last:
-                print(f"console sees t={m.get('t_us', 0) / 1e6:.3f}s buttons={'+'.join(names) or '-'} lx={lx} ly={ly}")
+                print(f"console sees t={m.get('t_us', 0) / 1e6:.3f}s buttons={'+'.join(names) or '-'} lx={ax['lx']} ly={ax['ly']} "
+                      f"rx={ax['rx']} ry={ax['ry']} lt={ax['lt']} rt={ax['rt']}")
                 last = state
 print(f"{n} reports")
+for k in sorted(seen_btn):
+    print("seen button", k)
+for h in sorted(seen_hat):
+    print("seen hat", h)
+for k in lo:
+    print(f"axis {k} min={lo[k]} max={hi[k]}")
+    if k in ("lt", "rt"):
+        print(f"seen trigger {k}" if hi[k] >= 32000 and lo[k] == 0 else f"missing trigger {k}")
+    else:
+        print(f"seen stick {k} low" if lo[k] <= -32000 else f"missing stick {k} low")
+        print(f"seen stick {k} high" if hi[k] >= 32000 else f"missing stick {k} high")
