@@ -1,3 +1,21 @@
+# Joypad OS, live in simulation
+
+![A DualSense pressed in the browser comes out as Switch buttons on the console side](sim/live/joypad-live.gif)
+
+*Speed-adjusted playback of a real run: the simulator ran at 0.03-0.17x real time on a loaded machine, so waiting is cut (about 12 s shown of over 2 min wall).*
+
+Press a DualSense in your browser; stock Joypad OS on a simulated RP2040 translates it; the right pad is what a Switch receives over USB.
+
+```sh
+SRC=ds5 SIM=/path/to/sim sim/live/demo
+```
+
+- [`sim/live/`](sim/live/): the live page
+- [`sim/mcp/`](sim/mcp/): joypad-mcp drives the sim
+- [`sim/ci/`](sim/ci/): peers and per-PR scenarios
+
+## Details
+
 ## Simulation showcase (Simantic fork)
 
 This fork runs unmodified Joypad OS firmware images on [Simantic](https://simantic.dev)'s `sim` (release 0.10.0 for most rows; the RP2040 gamepad row re-measured on 0.10.2), with scripted Python peers standing in for the host, the gamepad and the partner board. Licence of this repository: **Apache-2.0** (see `LICENSE`); the images in `sim/elf/` are builds of this code base and carry the same licence. Everything is in `sim/`: `run.sh`, `run_nrf.sh`, `peer.py`, `nrf_enum.py`, plotting scripts, `out/` (captured logs) and `screenshots/`.
