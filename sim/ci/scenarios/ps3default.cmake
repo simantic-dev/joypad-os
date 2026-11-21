@@ -1,0 +1,1 @@
+add_compile_definitions(USBD_DEFAULT_MODE=USB_OUTPUT_MODE_PS3)

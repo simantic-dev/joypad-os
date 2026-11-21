@@ -1,0 +1,4 @@
+# PR 286 targeted: Switch 2 Pro init survives a long config descriptor / a failed bulk transfer
+Verdict: DEMONSTRATED. Re-run 2026-11-20 with the current peers on the review simulator; same result as the earlier run. Details: review.md.
+281-byte descriptor: main "Invalid config descriptor length: 281", 0 bulk OUTs; PR "reading first 256", 18/18 commands, "Init sequence 1 complete" (native and PIO). Failed bulk (PIO): once -> "Cmd 3 failed, retrying", then 18/18; always -> three attempts, "Cmd 3 failed 3 times, abandoning init". Native host: the failed-bulk callback is not delivered (TinyUSB hcd_rp2040 STALL path), so that half is PIO only.
+Evidence: results/286/review/{native,pio}_{none,once,always}.{main,286}.* (scenarios/286.sh, 286_pio.sh). Earlier runs: results/286/targeted/, results/286/pio/.

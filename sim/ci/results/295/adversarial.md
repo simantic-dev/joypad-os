@@ -1,0 +1,6 @@
+# PR 295 adversarial: keep autofire state across profile_apply calls
+
+Static review plus the existing targeted run; no new sim run (the autofire path needs the runtime SELECT-hold profile and a second player, and the native host port takes one device).
+Read: `apply_usbd_profile_player` keeps `static uint32_t autofire_state[USB_MAX_PLAYERS][AUTOFIRE_BUTTON_COUNT]`, copies it into `profile_out` before `profile_apply` and back after. Every caller in usbd.c guards `player_index >= USB_MAX_PLAYERS` first (usbd.c 560, 1082...1404), so the 2-D index cannot overrun. `profile_apply` zeroes only `offsetof(autofire_start_ms)` bytes, so the copy-in survives. `profile_apply_button_map` now starts from `{0}` (one-shot), fine.
+Open points (reading): the static `profile_output_t` in gamecube/n64/nuon `update_output` is shared by every player the function serves (one static per file, not per player; loopy has four, 3do has `[MAX_PLAYERS]`); if those functions are called for more than one port, autofire phase and release are shared across ports. Not simulated (GC/N64/Nuon targets are outside the harness). Autofire state is also not reset when a player leaves or the profile changes (stale start time only shifts the phase).
+Findings: none shown (NONE); the shared-static point is UNVERIFIED.
