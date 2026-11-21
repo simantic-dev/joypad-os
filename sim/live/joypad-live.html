@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Joypad OS Live</title>
+<style>
+:root { --bg: #f4f5f7; --card: #ffffff; --ink: #1c1f24; --muted: #6a717d; --line: #d9dde3;
+  --body-a: #e6e8ec; --body-b: #cfd3da; --btn: #fbfbfc; --btn-ink: #3a3f47; --lit: #2f6df6; --lit-ink: #fff;
+  --pro-a: #3a3e45; --pro-b: #23262b; --pro-btn: #4b5058; --pro-ink: #e4e6ea; --ok: #1f9d55; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121417; --card: #1b1e23; --ink: #e8eaee;
+  --muted: #9097a3; --line: #2c3037; --body-a: #4a505a; --body-b: #353a42; --btn: #50565f; --btn-ink: #eef0f3;
+  --lit: #5b8cff; --pro-a: #2b2e34; --pro-b: #17191c; --pro-btn: #3d424a; --ok: #3ccf7c; } }
+:root[data-theme="dark"] { --bg: #121417; --card: #1b1e23; --ink: #e8eaee; --muted: #9097a3; --line: #2c3037;
+  --body-a: #4a505a; --body-b: #353a42; --btn: #50565f; --btn-ink: #eef0f3; --lit: #5b8cff; --pro-a: #2b2e34;
+  --pro-b: #17191c; --pro-btn: #3d424a; --ok: #3ccf7c; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1240px; margin: 0 auto; padding: 24px 16px; }
+h1 { font-size: 20px; font-weight: 600; margin: 0 0 18px; }
+h1 span { color: var(--muted); font-weight: 400; }
+.row { display: grid; grid-template-columns: 1fr minmax(180px, 240px) 1fr; gap: 16px; align-items: stretch; }
+@media (max-width: 860px) { .row { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; min-width: 0; }
+.card h2 { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+select { font: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; max-width: 60%; }
+svg.pad { width: 100%; height: auto; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+#in [data-b], #in .knob { cursor: pointer; }
+.pad text { font: 600 11px system-ui, sans-serif; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+#in .shape { fill: var(--btn); stroke: var(--body-b); stroke-width: 1.5; }
+#in text { fill: var(--btn-ink); }
+#out .shape { fill: var(--pro-btn); stroke: var(--pro-b); stroke-width: 1.5; }
+#out text { fill: var(--pro-ink); }
+#in .on .shape, #out .on .shape { fill: var(--lit); stroke: var(--lit); }
+#in .on text, #out .on text { fill: var(--lit-ink); }
+.well { fill: rgba(0,0,0,.18); }
+.mid { display: flex; flex-direction: column; justify-content: center; text-align: center; gap: 10px; }
+#now { font-size: 26px; font-weight: 650; min-height: 2.6em; display: flex; align-items: center; justify-content: center; word-break: break-word; }
+#now .arrow { color: var(--lit); margin: 0 .3em; }
+#hist { list-style: none; margin: 0; padding: 0; color: var(--muted); font-size: 14px; }
+#hist li { padding: 2px 0; }
+.hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+footer { margin-top: 14px; color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+footer b { color: var(--ink); font-weight: 600; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
+.dot.ok { background: var(--ok); }
+button.theme { margin-left: auto; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+<h1>Joypad OS <span>in simulation: press the left pad, the console sees the right one</span></h1>
+<div class="row">
+  <section class="card">
+    <h2>Your controller
+      <select id="src" aria-label="Input source">
+        <option value="uart">Pad over Joypad UART</option>
+        <option value="ds5" disabled>DualSense over USB (soon)</option>
+      </select></h2>
+    <svg id="in" class="pad" viewBox="0 0 400 260" role="group" aria-label="Controller to press"></svg>
+    <p class="hint">Click or touch. Keys: arrows, J K L I, Q E, 1 3, Enter, Backspace, H, WASD. A real gamepad works too.</p>
+  </section>
+  <section class="card mid" aria-live="polite">
+    <h2 style="justify-content:center">Joypad translates</h2>
+    <div id="now">press something</div>
+    <ul id="hist"></ul>
+  </section>
+  <section class="card">
+    <h2>What the console sees <span id="mode">Switch</span></h2>
+    <svg id="out" class="pad" viewBox="0 0 400 260" role="img" aria-label="Console view of the controller"></svg>
+    <p class="hint">Lit only from the USB reports the simulated console received.</p>
+  </section>
+</div>
+<footer>
+  <span><span id="dot" class="dot"></span><span id="link">waiting for the sim</span></span>
+  <span>sim time <b id="vt">-</b></span>
+  <span>speed <b id="spd">-</b></span>
+  <span>lag <b id="lag">-</b></span>
+  <span>stock Joypad OS 9fa79f45 on a simulated RP2040</span>
+  <button class="theme" id="theme">light / dark</button>
+</footer>
+</main>
+<script>
+const API = "http://127.0.0.1:" + (new URLSearchParams(location.search).get("port") || 5801) + "/";
+const NS = "http://www.w3.org/2000/svg";
+// JP_BUTTON_* bit order (src/core/buttons.h) and Switch HORI report bit order.
+const JP = ["B1","B2","B3","B4","L1","R1","L2","R2","S1","S2","L3","R3","DU","DD","DL","DR","A1","A2"];
+const SW = ["Y","B","A","X","L","R","ZL","ZR","-","+","L3","R3","Home","Capture"];
+const HAT = ["Up","Up+Right","Right","Down+Right","Down","Down+Left","Left","Up+Left"];
+const jp = n => 1 << JP.indexOf(n);
+
+// One body, two label sets. [name/bit key, shape, x, y, w|r, h]
+const LAYOUT = [
+  ["l2","r",72,6,70,16], ["r2","r",258,6,70,16], ["l1","r",66,26,82,14], ["r1","r",252,26,82,14],
+  ["s1","c",172,92,10], ["s2","c",228,92,10], ["a1","c",200,128,12], ["a2","c",200,160,8],
+  ["n","c",285,82,14], ["s","c",285,138,14], ["w","c",257,110,14], ["e","c",313,110,14],
+  ["du","r",142,152,18,20], ["dd","r",142,190,18,20], ["dl","r",120,172,22,18], ["dr","r",160,172,22,18],
+];
+const IN_LABEL = {l2:"L2",r2:"R2",l1:"L1",r1:"R1",s1:"S1",s2:"S2",a1:"A1",a2:"A2",n:"B4",s:"B1",w:"B3",e:"B2",du:"DU",dd:"DD",dl:"DL",dr:"DR"};
+const OUT_LABEL = {l2:"ZL",r2:"ZR",l1:"L",r1:"R",s1:"-",s2:"+",a1:"Home",a2:"Capture",n:"X",s:"B",w:"Y",e:"A",du:"Up",dd:"Down",dl:"Left",dr:"Right"};
+const ARROW = {du:"▲",dd:"▼",dl:"◀",dr:"▶"};
+
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+function build(svg, labels, a, b) {
+  const g = el("defs", {}, svg), gr = el("linearGradient", {id: svg.id + "g", x1: 0, y1: 0, x2: 0, y2: 1}, g);
+  el("stop", {offset: 0, "stop-color": `var(${a})`}, gr); el("stop", {offset: 1, "stop-color": `var(${b})`}, gr);
+  const parts = {};
+  for (const [k, s, x, y, w, h] of LAYOUT.slice(0, 4)) parts[k] = btn(svg, k, s, x, y, w, h, labels[k]);
+  el("path", {fill: `url(#${svg.id}g)`, d: "M110 40 H290 C350 40 382 82 391 150 C398 210 381 252 345 252 C314 252 300 218 280 198 H120 C100 218 86 252 55 252 C19 252 2 210 9 150 C18 82 50 40 110 40 Z"}, svg);
+  el("circle", {class: "well", cx: 115, cy: 110, r: 34}, svg); el("circle", {class: "well", cx: 250, cy: 180, r: 34}, svg);
+  for (const [k, s, x, y, w, h] of LAYOUT.slice(4)) parts[k] = btn(svg, k, s, x, y, w, h, ARROW[k] || labels[k]);
+  parts.ls = stick(svg, "ls", 115, 110, "L3"); parts.rs = stick(svg, "rs", 250, 180, "R3");
+  return parts;
+}
+function btn(svg, k, s, x, y, w, h, label) {
+  const g = el("g", {"data-k": k}, svg);
+  if (s === "c") { el("circle", {class: "shape", cx: x, cy: y, r: w}, g); el("text", {x, y}, g).textContent = label; }
+  else { el("rect", {class: "shape", x, y, width: w, height: h, rx: 5}, g); el("text", {x: x + w / 2, y: y + h / 2}, g).textContent = label; }
+  if (label.length > 3) g.querySelector("text").style.fontSize = "8px";
+  return g;
+}
+function stick(svg, k, x, y, label) {
+  const g = el("g", {"data-k": k, class: "knob"}, svg);
+  el("circle", {class: "shape", cx: x, cy: y, r: 22}, g); el("text", {x, y}, g).textContent = label;
+  g.cx = x; g.cy = y; return g;
+}
+const inP = build(document.getElementById("in"), IN_LABEL, "--body-a", "--body-b");
+const outP = build(document.getElementById("out"), OUT_LABEL, "--pro-a", "--pro-b");
+const moveKnob = (g, x, y) => g.setAttribute("transform", `translate(${(x - 128) / 128 * 20} ${(y - 128) / 128 * 20})`);
+
+// ---- input state: separate sources OR together so the mouse, keys and a gamepad never fight
+const held = {pointer: 0, keys: 0, pad: 0};
+const axes = {pointer: [128,128,128,128], pad: null};
+for (const k in IN_LABEL) { const bit = jp(IN_LABEL[k]); inP[k].dataset.b = bit; hold(inP[k], bit); }
+function hold(g, bit) {
+  const up = e => { held.pointer &= ~bit; g._p = null; change(); };
+  g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); held.pointer |= bit; change(); });
+  g.addEventListener("pointerup", up); g.addEventListener("pointercancel", up);
+}
+for (const [k, ai, bit] of [["ls", 0, jp("L3")], ["rs", 2, jp("R3")]]) {
+  const g = inP[k], svg = g.ownerSVGElement; let start = null, moved = false;
+  g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); start = [e.clientX, e.clientY]; moved = false; });
+  g.addEventListener("pointermove", e => {
+    if (!start) return;
+    const scale = 400 / svg.getBoundingClientRect().width, dx = (e.clientX - start[0]) * scale, dy = (e.clientY - start[1]) * scale;
+    if (Math.hypot(dx, dy) > 3) moved = true;
+    const m = Math.min(1, 30 / Math.max(1, Math.hypot(dx, dy)));
+    axes.pointer[ai] = Math.round(128 + dx * m / 30 * 127); axes.pointer[ai + 1] = Math.round(128 + dy * m / 30 * 127); change();
+  });
+  const end = () => { if (!start) return; start = null; axes.pointer[ai] = axes.pointer[ai + 1] = 128;
+    if (!moved) { held.pointer |= bit; change(); setTimeout(() => { held.pointer &= ~bit; change(); }, 120); } else change(); };
+  g.addEventListener("pointerup", end); g.addEventListener("pointercancel", end);
+}
+const KEYS = {ArrowUp:"DU",ArrowDown:"DD",ArrowLeft:"DL",ArrowRight:"DR",k:"B1",l:"B2",j:"B3",i:"B4",q:"L1",e:"R1","1":"L2","3":"R2",Backspace:"S1",Enter:"S2",h:"A1",g:"A2"};
+const WASD = {w:[1,0],s:[1,255],a:[0,0],d:[0,255]}, wasd = new Set();
+addEventListener("keydown", e => key(e, true)); addEventListener("keyup", e => key(e, false));
+function key(e, down) {
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (KEYS[k]) { e.preventDefault(); const b = jp(KEYS[k]); held.keys = down ? held.keys | b : held.keys & ~b; change(); }
+  else if (WASD[k]) { down ? wasd.add(k) : wasd.delete(k); change(); }
+}
+// Browser Gamepad API "standard" mapping: buttons 0-17 are the JP_BUTTON_* order exactly.
+function pollPads() {
+  const gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(p => p && p.mapping === "standard");
+  let b = 0, a = null;
+  if (gp) { gp.buttons.forEach((x, i) => { if (i < 18 && x.pressed) b |= 1 << i; });
+    a = gp.axes.slice(0, 4).map(v => Math.round(128 + (Math.abs(v) < .08 ? 0 : v) * 127)); if (a.length < 4) a = null; }
+  if (b !== held.pad || JSON.stringify(a) !== JSON.stringify(axes.pad)) { held.pad = b; axes.pad = a; change(); }
+  requestAnimationFrame(pollPads);
+}
+requestAnimationFrame(pollPads);
+
+function current() {
+  const buttons = held.pointer | held.keys | held.pad;
+  const st = axes.pad && axes.pad.some(v => Math.abs(v - 128) > 2) ? [...axes.pad] : [...axes.pointer];
+  for (const k of wasd) st[WASD[k][0]] = WASD[k][1];
+  return {buttons, analog: [...st, buttons & jp("L2") ? 255 : 0, buttons & jp("R2") ? 255 : 0]};
+}
+
+// ---- transport. The left pad's source is the one seam: a DualSense USB peer will get its own branch here.
+let sent = null, pending = false, dirty = false, lastSendAt = 0;
+function change() {
+  const s = current();
+  for (const k in IN_LABEL) inP[k].classList.toggle("on", !!(s.buttons & jp(IN_LABEL[k])));
+  inP.ls.classList.toggle("on", !!(s.buttons & jp("L3"))); inP.rs.classList.toggle("on", !!(s.buttons & jp("R3")));
+  moveKnob(inP.ls, s.analog[0], s.analog[1]); moveKnob(inP.rs, s.analog[2], s.analog[3]);
+  if (JSON.stringify(s) === JSON.stringify(sent)) return;
+  if (pending) { dirty = true; return; }
+  pending = true; sent = s; lastSendAt = performance.now();
+  const src = document.getElementById("src").value;
+  const req = src === "uart" ? fetch(API + "pad", {method: "POST", body: JSON.stringify(s)}) : Promise.reject(src);
+  req.catch(() => {}).finally(() => { pending = false; if (dirty) { dirty = false; change(); } });
+}
+
+// ---- console side: poll the USB console bridge, light the right pad from the report bytes
+let lastBtn = null, lagFrom = 0, prevSent = 0, hist = [];
+const names = (bits, list) => list.filter((n, i) => bits >> i & 1);
+async function poll() {
+  try {
+    const r = await (await fetch(API)).json();
+    document.getElementById("dot").classList.add("ok");
+    document.getElementById("link").textContent = r.connected ? "console enumerated" : "enumerating...";
+    document.getElementById("vt").textContent = (r.t_us / 1e6).toFixed(1) + " s";
+    if (r.speed) document.getElementById("spd").textContent = r.speed.toFixed(2) + "x real time";
+    if (r.connected) show(r);
+  } catch (e) {
+    document.getElementById("dot").classList.remove("ok"); document.getElementById("link").textContent = "sim not reachable: run ./demo";
+  }
+  setTimeout(poll, 16);
+}
+function show(r) {
+  const outBits = {l2:6,r2:7,l1:4,r1:5,s1:8,s2:9,a1:12,a2:13,n:3,s:1,w:0,e:2};
+  for (const k in outBits) outP[k].classList.toggle("on", !!(r.buttons >> outBits[k] & 1));
+  const dirs = r.hat < 8 ? HAT[r.hat] : "";
+  for (const [k, d] of [["du","Up"],["dd","Down"],["dl","Left"],["dr","Right"]]) outP[k].classList.toggle("on", dirs.includes(d));
+  outP.ls.classList.toggle("on", !!(r.buttons >> 10 & 1)); outP.rs.classList.toggle("on", !!(r.buttons >> 11 & 1));
+  moveKnob(outP.ls, r.sticks[0], r.sticks[1]); moveKnob(outP.rs, r.sticks[2], r.sticks[3]);
+  const key = r.buttons + ":" + r.hat;
+  if (key === lastBtn) return;
+  lastBtn = key;
+  if (sent && lastSendAt) document.getElementById("lag").textContent = Math.round(performance.now() - lastSendAt) + " ms";
+  // The translation is what was sent next to what the console decoded, never a table.
+  const a = names(sent ? sent.buttons : 0, JP), b = names(r.buttons, SW).concat(dirs ? [dirs] : []);
+  const now = document.getElementById("now");
+  now.innerHTML = a.length || b.length ? `<span>${a.join("+") || "-"}</span><span class="arrow">→</span><span>${b.join("+") || "-"}</span>` : "press something";
+  if (a.length === 1 && b.length) { const line = `${a.join("+")} → ${b.join("+")}`; hist = [line, ...hist.filter(h => h !== line)].slice(0, 6);
+    document.getElementById("hist").innerHTML = hist.map(h => `<li>${h}</li>`).join(""); }
+}
+poll(); change();  // start from a released pad, whatever an earlier page left held
+document.getElementById("theme").onclick = () => { const d = document.documentElement;
+  d.dataset.theme = (d.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark" ? "light" : "dark"; };
+</script>
+</body>
+</html>

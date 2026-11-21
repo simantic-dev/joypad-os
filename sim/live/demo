@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Live Joypad OS: the sim (USB device on 5802, uart0 on 5803) + bridge.py (http 5801), then opens the page.
+#   SIM=/path/to/sim ./demo        Ctrl-C stops everything.
+set -euo pipefail
+cd "$(dirname "$0")"
+sim="${SIM:-sim}"
+"$sim" RP2040 run --elf ../elf/usb2usb_feather_usb_host_9fa79f45.elf --timeout 86400 --real-time \
+  --usb-raw usb:5802 --uart-tcp uart0:5803 -q > sim.log 2>&1 &
+pids=$!
+trap 'kill $pids 2>/dev/null' EXIT INT TERM
+until nc -z 127.0.0.1 5802 2>/dev/null; do kill -0 $pids 2>/dev/null || { cat sim.log; exit 1; }; sleep 0.2; done
+python3 bridge.py 5802 5803 5801 > bridge.log 2>&1 &
+pids="$pids $!"
+url="file://$PWD/joypad-live.html"
+[ -n "${NO_OPEN:-}" ] || (command -v open >/dev/null && open "$url") || (command -v xdg-open >/dev/null && xdg-open "$url") || true
+echo "Joypad OS running in simulation: $url  (Ctrl-C to stop)"
+wait
