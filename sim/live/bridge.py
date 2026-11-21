@@ -3,7 +3,7 @@
   POST /pad {"buttons": JP_BUTTON_* bits, "analog": [lx, ly, rx, ry, lt, rt]} -> one Joypad UART host INPUT_EVENT
        frame [0xAA][LEN][TYPE][PAYLOAD][CRC8] (src/core/uart/uart_protocol.h) on `sim --uart-tcp uart0`;
   GET  /  -> the latest HID report the USB console (this script, on `sim --usb-raw`) got, Switch/HORI 8-byte layout.
-usage: bridge.py <usb_raw_port> <uart_tcp_port> <http_port>"""
+usage: bridge.py <usb_raw_port> <uart_tcp_port|-> <http_port>   (- = no UART: the pad comes from a USB peer)"""
 # shortcut: the pad goes over --uart-tcp because pyrite's ScriptedUartPeer cannot attach to the RP2040 PL011 yet;
 # move it to a control-port "pad" property on a UART peer once it can.
 import json, socket, struct, sys, threading, time
@@ -79,8 +79,9 @@ class H(BaseHTTPRequestHandler):
         pass
 
 
-uart = socket.create_connection(("127.0.0.1", int(sys.argv[2])))
-threading.Thread(target=lambda: [None for _ in iter(lambda: uart.recv(4096), b"")], daemon=True).start()  # drain the firmware log
+if sys.argv[2] != "-":
+    uart = socket.create_connection(("127.0.0.1", int(sys.argv[2])))
+    threading.Thread(target=lambda: [None for _ in iter(lambda: uart.recv(4096), b"")], daemon=True).start()  # drain the firmware log
 u = Usb(int(sys.argv[1])); u.enumerate()
 threading.Thread(target=pump, args=(u,), daemon=True).start()
 print(f"console: enumerated, serving http://127.0.0.1:{sys.argv[3]}/", flush=True)

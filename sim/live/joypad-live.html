@@ -57,7 +57,7 @@ button.theme { margin-left: auto; font: inherit; font-size: 12px; color: var(--m
     <h2>Your controller
       <select id="src" aria-label="Input source">
         <option value="uart">Pad over Joypad UART</option>
-        <option value="ds5" disabled>DualSense over USB (soon)</option>
+        <option value="ds5">DualSense over USB</option>
       </select></h2>
     <svg id="in" class="pad" viewBox="0 0 400 260" role="group" aria-label="Controller to press"></svg>
     <p class="hint">Click or touch. Keys: arrows, J K L I, Q E, 1 3, Enter, Backspace, H, WASD. A real gamepad works too.</p>
@@ -101,6 +101,14 @@ const LAYOUT = [
 const IN_LABEL = {l2:"L2",r2:"R2",l1:"L1",r1:"R1",s1:"S1",s2:"S2",a1:"A1",a2:"A2",n:"B4",s:"B1",w:"B3",e:"B2",du:"DU",dd:"DD",dl:"DL",dr:"DR"};
 const OUT_LABEL = {l2:"ZL",r2:"ZR",l1:"L",r1:"R",s1:"-",s2:"+",a1:"Home",a2:"Capture",n:"X",s:"B",w:"Y",e:"A",du:"Up",dd:"Down",dl:"Left",dr:"Right"};
 const ARROW = {du:"▲",dd:"▼",dl:"◀",dr:"▶"};
+// DualSense names per JP_BUTTON_* and its report 0x01 bit [byte 8|9|10 index, bit] (hid-playstation.c)
+const DS5 = {B1:["✕",0,5],B2:["○",0,6],B3:["□",0,4],B4:["△",0,7],L1:["L1",1,0],R1:["R1",1,1],L2:["L2",1,2],R2:["R2",1,3],
+  S1:["Create",1,4],S2:["Options",1,5],L3:["L3",1,6],R3:["R3",1,7],A1:["PS",2,0],A2:["Touchpad",2,1]};
+const srcSel = document.getElementById("src");
+srcSel.value = new URLSearchParams(location.search).get("src") === "ds5" ? "ds5" : "uart";
+const inName = n => srcSel.value === "ds5" && DS5[n] ? DS5[n][0] : n;
+srcSel.onchange = () => { for (const k in IN_LABEL) if (!ARROW[k]) { const t = inP[k].querySelector("text"); t.textContent = inName(IN_LABEL[k]);
+  t.style.fontSize = t.textContent.length > 3 ? "8px" : ""; } sent = null; change(); };
 
 function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
 function build(svg, labels, a, b) {
@@ -179,7 +187,20 @@ function current() {
   return {buttons, analog: [...st, buttons & jp("L2") ? 255 : 0, buttons & jp("R2") ? 255 : 0]};
 }
 
-// ---- transport. The left pad's source is the one seam: a DualSense USB peer will get its own branch here.
+// ---- transport. The left pad's source is the one seam.
+// DualSense: the page sets the USB peer's "pad" property over the sim control port (pyrite ScriptedUsbDevice set/get).
+let ctl = null, ctlId = 0;
+function ds5Send(s) {
+  if (!ctl || ctl.readyState > 1) { ctl = new WebSocket("ws://127.0.0.1:5800/control/pad"); ctl.onmessage = e => { const m = JSON.parse(e.data); if (m.type === "error") console.warn("control port:", m); }; }
+  const b = [0, 0, 0], d = n => s.buttons & jp(n);
+  for (const n in DS5) if (d(n)) b[DS5[n][1]] |= 1 << DS5[n][2];
+  const hat = [[1,0,0,0],[1,0,0,1],[0,0,0,1],[0,1,0,1],[0,1,0,0],[0,1,1,0],[0,0,1,0],[1,0,1,0]]
+    .findIndex(h => h.join() === [d("DU"), d("DD"), d("DL"), d("DR")].map(Boolean).map(Number).join());
+  const msg = JSON.stringify({set: {peripheral: "dev", property: "pad", id: ++ctlId,
+    value: {buttons: b, hat: hat < 0 ? 8 : hat, sticks: s.analog.slice(0, 4), triggers: s.analog.slice(4)}}});
+  if (ctl.readyState === 1) ctl.send(msg); else ctl.addEventListener("open", () => ctl.send(msg), {once: true});
+  return Promise.resolve();
+}
 let sent = null, pending = false, dirty = false, lastSendAt = 0;
 function change() {
   const s = current();
@@ -189,8 +210,8 @@ function change() {
   if (JSON.stringify(s) === JSON.stringify(sent)) return;
   if (pending) { dirty = true; return; }
   pending = true; sent = s; lastSendAt = performance.now();
-  const src = document.getElementById("src").value;
-  const req = src === "uart" ? fetch(API + "pad", {method: "POST", body: JSON.stringify(s)}) : Promise.reject(src);
+  const src = srcSel.value;
+  const req = src === "uart" ? fetch(API + "pad", {method: "POST", body: JSON.stringify(s)}) : ds5Send(s);
   req.catch(() => {}).finally(() => { pending = false; if (dirty) { dirty = false; change(); } });
 }
 
@@ -222,13 +243,13 @@ function show(r) {
   lastBtn = key;
   if (sent && lastSendAt) document.getElementById("lag").textContent = Math.round(performance.now() - lastSendAt) + " ms";
   // The translation is what was sent next to what the console decoded, never a table.
-  const a = names(sent ? sent.buttons : 0, JP), b = names(r.buttons, SW).concat(dirs ? [dirs] : []);
+  const a = names(sent ? sent.buttons : 0, JP).map(inName), b = names(r.buttons, SW).concat(dirs ? [dirs] : []);
   const now = document.getElementById("now");
   now.innerHTML = a.length || b.length ? `<span>${a.join("+") || "-"}</span><span class="arrow">→</span><span>${b.join("+") || "-"}</span>` : "press something";
   if (a.length === 1 && b.length) { const line = `${a.join("+")} → ${b.join("+")}`; hist = [line, ...hist.filter(h => h !== line)].slice(0, 6);
     document.getElementById("hist").innerHTML = hist.map(h => `<li>${h}</li>`).join(""); }
 }
-poll(); change();  // start from a released pad, whatever an earlier page left held
+poll(); srcSel.onchange();  // start from a released pad, whatever an earlier page left held
 document.getElementById("theme").onclick = () => { const d = document.documentElement;
   d.dataset.theme = (d.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark" ? "light" : "dark"; };
 </script>
