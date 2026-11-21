@@ -46,6 +46,11 @@ footer { margin-top: 14px; color: var(--muted); font-size: 13px; display: flex; 
 footer b { color: var(--ink); font-weight: 600; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
 .dot.ok { background: var(--ok); }
+.log { margin-top: 16px; }
+#log { font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; height: 13.5em; overflow-y: auto; white-space: pre; }
+#log div { overflow: hidden; text-overflow: ellipsis; }
+#log .t { color: var(--muted); }
+#log .ds5 { color: #c2410c; } #log .fw { color: var(--ok); } #log .usb { color: var(--lit); }
 button.theme { margin-left: auto; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
 </style>
 </head>
@@ -73,6 +78,10 @@ button.theme { margin-left: auto; font: inherit; font-size: 12px; color: var(--m
     <p class="hint">Lit only from the USB reports the simulated console received.</p>
   </section>
 </div>
+<section class="card log">
+  <h2>What the sim did <span style="text-transform:none;letter-spacing:0">sim time · DS5 → report the peer sent · firmware console · USB IN → report the console got</span></h2>
+  <div id="log" aria-live="off"></div>
+</section>
 <footer>
   <span><span id="dot" class="dot"></span><span id="link">waiting for the sim</span></span>
   <span>sim time <b id="vt">-</b></span>
@@ -191,7 +200,9 @@ function current() {
 // DualSense: the page sets the USB peer's "pad" property over the sim control port (pyrite ScriptedUsbDevice set/get).
 let ctl = null, ctlId = 0;
 function ds5Send(s) {
-  if (!ctl || ctl.readyState > 1) { ctl = new WebSocket("ws://127.0.0.1:5800/control/pad"); ctl.onmessage = e => { const m = JSON.parse(e.data); if (m.type === "error") console.warn("control port:", m); }; }
+  if (!ctl || ctl.readyState > 1) { ctl = new WebSocket("ws://127.0.0.1:5800/control/pad"); ctl.onmessage = e => { const m = JSON.parse(e.data);
+    if (m.type === "error") console.warn("control port:", m); else if (m.type === "value") peerReport(m.value, m.virtualTime);
+    else if (m.type === "ack") lastAck = m.virtualTime; }; }
   const b = [0, 0, 0], d = n => s.buttons & jp(n);
   for (const n in DS5) if (d(n)) b[DS5[n][1]] |= 1 << DS5[n][2];
   const hat = [[1,0,0,0],[1,0,0,1],[0,0,0,1],[0,1,0,1],[0,1,0,0],[0,1,1,0],[0,0,1,0],[1,0,1,0]]
@@ -202,12 +213,17 @@ function ds5Send(s) {
   return Promise.resolve();
 }
 let sent = null, pending = false, dirty = false, lastSendAt = 0;
+// The left pad also lights from the report the DualSense peer actually sent, so it shows whatever drove the peer.
+const peer = {buttons: 0, sticks: null};
 function change() {
-  const s = current();
-  for (const k in IN_LABEL) inP[k].classList.toggle("on", !!(s.buttons & jp(IN_LABEL[k])));
-  inP.ls.classList.toggle("on", !!(s.buttons & jp("L3"))); inP.rs.classList.toggle("on", !!(s.buttons & jp("R3")));
-  moveKnob(inP.ls, s.analog[0], s.analog[1]); moveKnob(inP.rs, s.analog[2], s.analog[3]);
+  const s = current(), lit = s.buttons | peer.buttons;
+  const st = peer.sticks && s.analog.slice(0, 4).every(v => v === 128) ? peer.sticks : s.analog;
+  for (const k in IN_LABEL) inP[k].classList.toggle("on", !!(lit & jp(IN_LABEL[k])));
+  inP.ls.classList.toggle("on", !!(lit & jp("L3"))); inP.rs.classList.toggle("on", !!(lit & jp("R3")));
+  moveKnob(inP.ls, st[0], st[1]); moveKnob(inP.rs, st[2], st[3]);
   if (JSON.stringify(s) === JSON.stringify(sent)) return;
+  // the sim never delivers a report if the DualSense peer's pad is set before the console has one; hold sets until then
+  if (srcSel.value === "ds5" && !live) return;
   if (pending) { dirty = true; return; }
   pending = true; sent = s; lastSendAt = performance.now();
   const src = srcSel.value;
@@ -216,7 +232,7 @@ function change() {
 }
 
 // ---- console side: poll the USB console bridge, light the right pad from the report bytes
-let lastBtn = null, lagFrom = 0, prevSent = 0, hist = [];
+let live = false, lastBtn = null, lagFrom = 0, prevSent = 0, hist = [];
 const names = (bits, list) => list.filter((n, i) => bits >> i & 1);
 async function poll() {
   try {
@@ -225,7 +241,7 @@ async function poll() {
     document.getElementById("link").textContent = r.connected ? "console enumerated" : "enumerating...";
     document.getElementById("vt").textContent = (r.t_us / 1e6).toFixed(1) + " s";
     if (r.speed) document.getElementById("spd").textContent = r.speed.toFixed(2) + "x real time";
-    if (r.connected) show(r);
+    if (r.connected) { if (!live) { live = true; change(); } show(r); }
   } catch (e) {
     document.getElementById("dot").classList.remove("ok"); document.getElementById("link").textContent = "sim not reachable: run ./demo";
   }
@@ -249,7 +265,47 @@ function show(r) {
   if (a.length === 1 && b.length) { const line = `${a.join("+")} → ${b.join("+")}`; hist = [line, ...hist.filter(h => h !== line)].slice(0, 6);
     document.getElementById("hist").innerHTML = hist.map(h => `<li>${h}</li>`).join(""); }
 }
-poll(); srcSel.onchange();  // start from a released pad, whatever an earlier page left held
+// ---- log strip: bridge feed (firmware console + USB IN) and the peer's own report, ordered by sim time
+const logs = []; let logNext = 0, lastPeer = "", lastAck = 0, lastPeerT = 0;
+const hexsp = h => h.match(/../g).join(" ");
+const fmtT = us => (us / 1e6).toFixed(6).padStart(11) + " s";
+function addLog(t_us, cls, tag, text) {
+  logs.push({t_us, cls, tag, text}); logs.sort((a, b) => a.t_us - b.t_us); if (logs.length > 400) logs.splice(0, 100);
+  const box = document.getElementById("log");
+  box.innerHTML = logs.slice(-60).map(l => `<div><span class="t">${fmtT(l.t_us)}</span>  <span class="${l.cls}">${l.tag.padEnd(9)}</span> ${l.text.replace(/</g, "&lt;")}</div>`).join("");
+  box.scrollTop = box.scrollHeight;
+}
+function peerReport(h, vt) {
+  if (!h) return;
+  const b = h.match(/../g).map(x => parseInt(x, 16));
+  const key = [...b.slice(1, 7), b[8], b[9], b[10] & 7].join();  // seq number, frame counter, IMU and touch counters tick every report
+  if (key === lastPeer) return;
+  lastPeer = key;
+  let bits = 0; for (const n in DS5) if (b[8 + DS5[n][1]] >> DS5[n][2] & 1) bits |= jp(n);
+  const hat = b[8] & 15, d = hat < 8 ? HAT[hat] : "";
+  for (const [n, w] of [["DU","Up"],["DD","Down"],["DL","Left"],["DR","Right"]]) if (d.includes(w)) bits |= jp(n);
+  peer.buttons = bits; peer.sticks = b.slice(1, 5); change();
+  // stamp: when the page's set took effect (the peer sends it on its next poll), else when the get saw it
+  const t = lastAck > lastPeerT ? lastAck : vt; lastPeerT = t;
+  addLog(t * 1e6, "ds5", "DS5 →", hexsp(h.slice(0, 24)) + " …");
+}
+setInterval(() => { if (srcSel.value === "ds5" && ctl && ctl.readyState === 1)
+  ctl.send(JSON.stringify({get: {peripheral: "dev", property: "report", id: ++ctlId}})); }, 100);
+async function pollLog() {
+  try {
+    const r = await (await fetch(API + "log?since=" + logNext)).json();
+    logNext = r.next;
+    for (const l of r.lines) {
+      if (l.src === "fw") { addLog(l.t_us, "fw", "firmware", l.text); continue; }
+      const b = l.text.match(/../g).map(x => parseInt(x, 16)), bt = b[0] | b[1] << 8;
+      const nm = names(bt, SW).concat(b[2] < 8 ? [HAT[b[2]]] : []);
+      const st = b.slice(3, 7).some(v => Math.abs(v - 128) > 8) ? ` stick ${b.slice(3, 7).join(",")}` : "";
+      addLog(l.t_us, "usb", "USB IN →", hexsp(l.text) + "  " + (nm.join("+") || "-") + st);
+    }
+  } catch (e) {}
+  setTimeout(pollLog, 100);
+}
+pollLog(); poll(); srcSel.onchange();  // start from a released pad, whatever an earlier page left held
 document.getElementById("theme").onclick = () => { const d = document.documentElement;
   d.dataset.theme = (d.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark" ? "light" : "dark"; };
 </script>

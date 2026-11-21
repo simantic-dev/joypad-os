@@ -5,3 +5,4 @@ ds5.device.py
 ds5.board.repl
 ds5.yaml
 __pycache__/
+console.txt
