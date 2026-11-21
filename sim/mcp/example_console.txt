@@ -1,0 +1,31 @@
+usb reset: {'id': 1, 'ok': True, 't_us': 34000}
+usb device 0f0d:0092
+usb configured, HID IN endpoint 0x81
+subscribe: {'id': 7, 'ok': True, 't_us': 390000}
+console: enumerated
+console sees t=1.248s buttons=B lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=1.426s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=1.844s buttons=A+DR lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=2.056s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=2.498s buttons=- lx,ly,rx,ry=(255, 128, 128, 128)
+console sees t=2.898s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.262s buttons=DU lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.312s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.338s buttons=DU lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.382s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.406s buttons=DD lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.456s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.478s buttons=DD lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.528s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.550s buttons=DL lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.600s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.622s buttons=DR lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.658s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.682s buttons=DL lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.720s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.744s buttons=DR lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.786s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.810s buttons=A lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.860s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.890s buttons=B lx,ly,rx,ry=(128, 128, 128, 128)
+console sees t=3.940s buttons=- lx,ly,rx,ry=(128, 128, 128, 128)
