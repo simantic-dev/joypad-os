@@ -2,7 +2,7 @@
 
 ![A DualSense pressed in the browser comes out as Switch buttons on the console side](sim/live/joypad-live.gif)
 
-*Speed-adjusted playback of a real run: the simulator ran at 0.03-0.17x real time on a loaded machine, so waiting is cut (about 12 s shown of over 2 min wall).*
+*Speed-adjusted playback of a real run: the simulator ran at 0.14-0.28x real time, so waiting is cut (about 11 s shown). The log under the pads is the run itself, stamped in simulated time: the report the DualSense peer sent, the stock firmware's console, and the report the console received.*
 
 Press a DualSense in your browser; stock Joypad OS on a simulated RP2040 translates it; the right pad is what a Switch receives over USB.
 
