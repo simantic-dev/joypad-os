@@ -1,5 +1,9 @@
 # Joypad OS, live in simulation
 
+<!-- simantic-banner -->
+> **Run this firmware with no hardware.** [Simantic](https://simantic.com) simulates the whole board, peripherals, sensors and buses included. Try it free at **[simantic.com](https://simantic.com)**, or run it locally: `curl -fsSL https://simantic.com/install | sh`
+
+
 ![A DualSense pressed in the browser comes out as Switch buttons on the console side](sim/live/joypad-live.gif)
 
 *Speed-adjusted playback of a real run: the simulator ran at 0.14-0.28x real time, so waiting is cut (about 11 s shown). The log under the pads is the run itself, stamped in simulated time: the report the DualSense peer sent, the stock firmware's console, and the report the console received.*
