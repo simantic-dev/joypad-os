@@ -1,17 +1,30 @@
 #!/usr/bin/env bash
 # Live Joypad OS: the sim (USB device on 5802, uart0 on 5803) + bridge.py (http 5801), then opens the page.
 #   SIM=/path/to/sim ./demo        Ctrl-C stops everything.
+#   SRC=ds5 ./demo                 a DualSense on the PIO-USB host port instead, driven from the page over control port 5800
+#                                  (needs a pyrite with ScriptedUsbDevice set/get, pyrite #3990)
 set -euo pipefail
 cd "$(dirname "$0")"
 sim="${SIM:-sim}"
-"$sim" RP2040 run --elf ../elf/usb2usb_feather_usb_host_9fa79f45.elf --timeout 86400 --real-time \
-  --usb-raw usb:5802 --uart-tcp uart0:5803 -q > sim.log 2>&1 &
+if [ "${SRC:-}" = ds5 ]; then
+  P=../ci/scenarios/peers
+  { echo "VID=0x054c; PID=0x0ce6; KIND='ds5'; OPT=''"; cat $P/usb_head.py $P/usb_ds5.py; } > ds5.device.py
+  printf 'piousb: USB.PioUsb @ none\n\ngpio0:\n    16 -> piousb@0 | pio0@16 | pio1@16\n    17 -> piousb@1 | pio0@17 | pio1@17\n\npiousb:\n    0 -> gpio0@48\n    1 -> gpio0@49\n\ndev: USB.ScriptedUsbDevice @ piousb\n    file: "%s"\n' "$PWD/ds5.device.py" > ds5.board.repl
+  # a scenario, not --board + --control-port: on the CLI path the control port does not see board-file peers ("no peripheral named 'dev'")
+  printf 'machines:\n  pad:\n    mcu: RP2040\n    overlay: %s\n    elf: %s\ncontrolPort: 5800\ntimeout: 86400\n' "$PWD/ds5.board.repl" "$PWD/../elf/usb2usb_feather_usb_host_9fa79f45.elf" > ds5.yaml
+  "$sim" run --scenario ds5.yaml --real-time --usb-raw usb:5802 -q > sim.log 2>&1 &
+  uart=-
+else
+  "$sim" RP2040 run --elf ../elf/usb2usb_feather_usb_host_9fa79f45.elf --timeout 86400 --real-time \
+    --usb-raw usb:5802 --uart-tcp uart0:5803 -q > sim.log 2>&1 &
+  uart=5803
+fi
 pids=$!
 trap 'kill $pids 2>/dev/null' EXIT INT TERM
 until nc -z 127.0.0.1 5802 2>/dev/null; do kill -0 $pids 2>/dev/null || { cat sim.log; exit 1; }; sleep 0.2; done
-python3 bridge.py 5802 5803 5801 > bridge.log 2>&1 &
+python3 bridge.py 5802 $uart 5801 > bridge.log 2>&1 &
 pids="$pids $!"
-url="file://$PWD/joypad-live.html"
+url="file://$PWD/joypad-live.html${SRC:+?src=$SRC}"
 [ -n "${NO_OPEN:-}" ] || (command -v open >/dev/null && open "$url") || (command -v xdg-open >/dev/null && xdg-open "$url") || true
 echo "Joypad OS running in simulation: $url  (Ctrl-C to stop)"
 wait

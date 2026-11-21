@@ -95,3 +95,30 @@ def phases(ep, n):
     if s < 13: return report(n, f1=(TW - 1, TH - 1))
     if s < 14: return report(n, f1=(TW // 2, TH // 2), f2=(TW // 4, TH // 4))
     return report(n)
+
+# Live mode (sim/live, control port): set_property("pad", {"buttons": [b8, b9, b10], "hat": 0..8,
+# "sticks": [lx, ly, rx, ry], "triggers": [l2, r2]}) replaces the timeline above; bytes 8..10 as report 0x01
+# (b8 upper nibble = square/cross/circle/triangle, b9 = L1 R1 L2 R2 Create Options L3 R3, b10 = PS touchpad mute).
+class Device(Base):
+    pad = None
+
+    def set_property(self, name, value):
+        if name != "pad": raise KeyError(name)
+        self.pad = value
+        log("pad", value)
+
+    def get_property(self, name):
+        if name != "pad": raise KeyError(name)
+        return self.pad
+
+    def on_in(self, ep):
+        if self.pad is None or ep != 4: return Base.on_in(self, ep)
+        n = self.polls[ep] = self.polls.get(ep, 0) + 1
+        p = self.pad
+        r = bytearray(report(n, lx=p["sticks"][0], ly=p["sticks"][1], rx=p["sticks"][2], ry=p["sticks"][3],
+                             l2=p["triggers"][0], r2=p["triggers"][1]))
+        b8, b9, b10 = p["buttons"]
+        r[8] = (b8 & 0xF0) | (p["hat"] & 0x0F)
+        r[9] = b9
+        r[10] = (r[10] & 0xF8) | (b10 & 7)
+        return bytes(r)
