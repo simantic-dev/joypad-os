@@ -1,3 +1,6 @@
 sim.log
 bridge.log
 demo.out
+ds5.device.py
+ds5.board.repl
+ds5.yaml
