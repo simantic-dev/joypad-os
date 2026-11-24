@@ -22,7 +22,7 @@ SRC=ds5 SIM=/path/to/sim sim/live/demo
 
 ## Simulation showcase (Simantic fork)
 
-This fork runs unmodified Joypad OS firmware images on [Simantic](https://simantic.dev)'s `sim` (release 0.10.0 for most rows; the RP2040 gamepad row re-measured on 0.10.2), with scripted Python peers standing in for the host, the gamepad and the partner board. Licence of this repository: **Apache-2.0** (see `LICENSE`); the images in `sim/elf/` are builds of this code base and carry the same licence. Everything is in `sim/`: `run.sh`, `run_nrf.sh`, `peer.py`, `nrf_enum.py`, plotting scripts, `out/` (captured logs) and `screenshots/`.
+This fork runs unmodified Joypad OS firmware images on [Simantic](https://simantic.dev)'s `sim` (release 0.10.0 for most rows; the RP2040 gamepad row re-measured on 0.10.8), with scripted Python peers standing in for the host, the gamepad and the partner board. Licence of this repository: **Apache-2.0** (see `LICENSE`); the images in `sim/elf/` are builds of this code base and carry the same licence. Everything is in `sim/`: `run.sh`, `run_nrf.sh`, `peer.py`, `nrf_enum.py`, plotting scripts, `out/` (captured logs) and `screenshots/`.
 
 ```mermaid
 flowchart LR
@@ -36,20 +36,20 @@ flowchart LR
 | --- | --- | --- | --- |
 | RP2040 remapper A: boot and console | `sim/run.sh refresh` | `a_ps5default_2145ffa8.elf` (PS5 default, RP2040) | boots; 25 console lines by 0.10 s; `[button] Event: HOLD` at 1.603 s; screenshot 01 |
 | RP2040: USB enumeration | same | same | device 2b81:0101 configured, HID IN endpoint 0x81 |
-| RP2040: gamepad HOME presses through the adapter to the console | `sim/run.sh change`, `sim/run.sh refresh` | same | **works on sim 0.10.2 (MEASURED 2026-11-17)**: 3 HOME presses sent over UART, 11 HID reports reach the console and 12 sign requests; the console sees HOME DOWN/UP at 1040/1232 ms and 3040/3232 ms. On 0.10.0 and earlier (also 0.8.12, 0.9.0, 0.9.2) the same ELF gave 0 reports: a simulator bug, now fixed (the RP2040 clock wrapper `ClockGated` forwarded `host_rx()` but not `uart_rx()`, so `--uart-tcp`/`--uart-pty` bytes never reached the PL011) |
+| RP2040: gamepad HOME presses through the adapter to the console | `sim/run.sh change`, `sim/run.sh refresh` | same | **works on sim 0.10.8 (build 64f89c38, MEASURED 2026-11-24; same numbers on 0.10.2)**: 3 HOME presses sent over UART, 11 HID reports reach the console and 12 sign requests; the console sees HOME DOWN/UP at 1040/1232 ms and 3040/3232 ms. On 0.10.0 and earlier (also 0.8.12, 0.9.0, 0.9.2) the same ELF gave 0 reports: a simulator bug, now fixed (the RP2040 clock wrapper `ClockGated` forwarded `host_rx()` but not `uart_rx()`, so `--uart-tcp`/`--uart-pty` bytes never reached the PL011) |
 | nRF52840 usb2usb DK image: boot | `sim/run_nrf.sh` | `usb2usb_nrf52840dk.elf` | boots to `Entering main loop` at 0.75 s virtual, 1.9 s wall; the sim flags the model `incomplete` and does not list it in `sim models`; screenshot 02 |
 | nRF52840: USBD descriptors | same | same | device descriptor read (VID 2e8a, PID 10c6); config header read after SET_ADDRESS (wTotalLength 0x9d, 5 interfaces). Bus reset is not modelled (`'usbd' does not model a bus reset`); before SET_ADDRESS a config-descriptor request returns the device descriptor again. Enumeration to Configured: `unverified` on 0.10.0 |
 | nRF52840: gamepad through the adapter | n/a | n/a | not run: the MAX3421E SPI face has no peer on 0.10.0 (`[max3421] ERROR: chip not detected`), and the UART inject path (`uart_host`) is not in this repository's `main` |
 
 ![RP2040 playback](sim/screenshots/04-playback-rp2040.gif)
 
-*Playback of a captured run (virtual time), not real time: sim 0.10.2 (build 83eb7a66), 4.1 s of virtual time shown (run bound 8 s), about 43 s wall for `sim/run.sh refresh`. Gamepad HOME press/release (triangles), the 11 HID IN reports (squares) and the console lines, all from `sim/out/refresh.*`.*
+*Playback of a captured run (virtual time), not real time: sim 0.10.2 (build 83eb7a66; re-run on 0.10.8 gives the same 11 reports), 4.1 s of virtual time shown (run bound 8 s), about 43 s wall for `sim/run.sh refresh`. Gamepad HOME press/release (triangles), the 11 HID IN reports (squares) and the console lines, all from `sim/out/refresh.*`.*
 
 ![RP2040 console](sim/screenshots/01-console-timeline-rp2040.png)
 ![nRF52840 console](sim/screenshots/02-console-timeline-nrf52840.png)
 ![pad vs HID reports](sim/screenshots/03-pad-vs-hid-reports-rp2040.png)
 
-**Update (2026-11-17).** Re-run on sim 0.10.2 with the simulator fix: 11 HID reports and 12 sign requests for the same three HOME presses (the chart above and the table row are from that run). The earlier 0-report result on 0.10.0 and older was a simulator bug, not firmware, and not the PL011 RTS/CTS fix (that fix is in 0.10.0 and works). `Player 1` in A's STATUS frames is hardcoded in `usb2usb_remapper_v7_a/app.c` (`st.player_number = 1`, flags = CONNECTED), so it is not evidence of a player assignment. That older dev builds delivered the bytes is `unverified`.
+**Update (2026-11-24).** Re-run on sim 0.10.8 (build 64f89c38): 11 HID reports, 12 sign requests, HOME DOWN/UP at 1040/1232 ms and 3040/3232 ms, unchanged. Earlier, on sim 0.10.2 with the simulator fix: 11 HID reports and 12 sign requests for the same three HOME presses (the chart above and the table row are from that run). The earlier 0-report result on 0.10.0 and older was a simulator bug, not firmware, and not the PL011 RTS/CTS fix (that fix is in 0.10.0 and works). `Player 1` in A's STATUS frames is hardcoded in `usb2usb_remapper_v7_a/app.c` (`st.player_number = 1`, flags = CONNECTED), so it is not evidence of a player assignment. That older dev builds delivered the bytes is `unverified`.
 
 Provenance and simplifications:
 
