@@ -32,14 +32,14 @@ flowchart LR
   nrf["nRF52840: usb2usb DK image"] -- "USBD, --usb-raw" --> host2["host (nrf_enum.py)"]
 ```
 
-| Configuration | Command | Image | Result (MEASURED, 2026-11-16, sim 0.10.0) |
+| Configuration | Command | Image | Result (MEASURED, 2026-11-16, sim 0.10.0; nRF52840 rows re-measured 2026-11-24, sim 0.10.8) |
 | --- | --- | --- | --- |
 | RP2040 remapper A: boot and console | `sim/run.sh refresh` | `a_ps5default_2145ffa8.elf` (PS5 default, RP2040) | boots; 25 console lines by 0.10 s; `[button] Event: HOLD` at 1.603 s; screenshot 01 |
 | RP2040: USB enumeration | same | same | device 2b81:0101 configured, HID IN endpoint 0x81 |
 | RP2040: gamepad HOME presses through the adapter to the console | `sim/run.sh change`, `sim/run.sh refresh` | same | **works on sim 0.10.8 (build 64f89c38, MEASURED 2026-11-24; same numbers on 0.10.2)**: 3 HOME presses sent over UART, 11 HID reports reach the console and 12 sign requests; the console sees HOME DOWN/UP at 1040/1232 ms and 3040/3232 ms. On 0.10.0 and earlier (also 0.8.12, 0.9.0, 0.9.2) the same ELF gave 0 reports: a simulator bug, now fixed (the RP2040 clock wrapper `ClockGated` forwarded `host_rx()` but not `uart_rx()`, so `--uart-tcp`/`--uart-pty` bytes never reached the PL011) |
-| nRF52840 usb2usb DK image: boot | `sim/run_nrf.sh` | `usb2usb_nrf52840dk.elf` | boots to `Entering main loop` at 0.75 s virtual, 1.9 s wall; the sim flags the model `incomplete` and does not list it in `sim models`; screenshot 02 |
-| nRF52840: USBD descriptors | same | same | device descriptor read (VID 2e8a, PID 10c6); config header read after SET_ADDRESS (wTotalLength 0x9d, 5 interfaces). Bus reset is not modelled (`'usbd' does not model a bus reset`); before SET_ADDRESS a config-descriptor request returns the device descriptor again. Enumeration to Configured: `unverified` on 0.10.0 |
-| nRF52840: gamepad through the adapter | n/a | n/a | not run: the MAX3421E SPI face has no peer on 0.10.0 (`[max3421] ERROR: chip not detected`), and the UART inject path (`uart_host`) is not in this repository's `main` |
+| nRF52840 usb2usb DK image: boot | `sim/run_nrf.sh` | `usb2usb_nrf52840dk.elf` | **re-measured on sim 0.10.8 (build 64f89c38, MEASURED 2026-11-24)**: boots to `Entering main loop` at 0.785 s virtual (0.10.0: 0.75 s); the sim still warns `NRF52840QIAA's model is incomplete` and still does not list it in `sim models` (unchanged); screenshot 02 is from 0.10.0 |
+| nRF52840: USBD descriptors | same | same | device descriptor read (VID 2e8a, PID 10c6); config header read after SET_ADDRESS (wTotalLength 0x9d, 5 interfaces). Bus reset is not modelled (`'usbd' does not model a bus reset`); before SET_ADDRESS a config-descriptor request returns the device descriptor again. Enumeration to Configured: `unverified` (re-run on 0.10.8, MEASURED 2026-11-24: same results, bus reset still not modelled, descriptor reads unchanged: VID 2e8a PID 10c6, wTotalLength 0x9d, config request after SET_ADDRESS still returns the 9-byte header only; `nrf_enum.py` does not go further) |
+| nRF52840: gamepad through the adapter | n/a | n/a | not run: the MAX3421E SPI face still has no peer on 0.10.8 (MEASURED 2026-11-24: `[max3421] ERROR: chip not detected`, probe rev 0x00; no MAX3421E device model found in pyrite or sim-fixtures, only a comment in `nrf52840_spi.rs` saying one is needed; unchanged from 0.10.0), and the UART inject path (`uart_host`) is not in this repository's `main` |
 
 ![RP2040 playback](sim/screenshots/04-playback-rp2040.gif)
 
